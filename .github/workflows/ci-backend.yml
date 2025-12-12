@@ -1,0 +1,47 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master", "develop" ]
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+
+    env:
+      ASPNETCORE_ENVIRONMENT: Development
+      DOTNET_ENVIRONMENT: Development
+
+      # 如果 CI 上遇到 Testcontainers 問題才需要打開
+      # TESTCONTAINERS_RYUK_DISABLED: "true"
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"   # 你現在專案看起來是 .NET 8
+
+      - name: Restore
+        run: dotnet restore backend/MyApp.sln
+
+      - name: Build
+        run: dotnet build backend/MyApp.sln -c Release --no-restore
+
+      - name: Test (Unit + Integration)
+        run: dotnet test backend/MyApp.sln -c Release --no-build --logger "trx;LogFileName=test_results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: backend/**/TestResults/*.trx
