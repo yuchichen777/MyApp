@@ -3,8 +3,14 @@ name: Backend CI
 on:
   push:
     branches: [ "main", "master", "develop" ]
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci-backend.yml"
   pull_request:
     branches: [ "main", "master", "develop" ]
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci-backend.yml"
 
 concurrency:
   group: backend-ci-${{ github.ref }}
@@ -28,7 +34,16 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.x"   # 你現在專案看起來是 .NET 8
+          dotnet-version: "10.0.x"   # .NET 10
+
+      # NuGet Cache（加速 restore）
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/**/*.props', 'backend/**/*.targets', 'backend/global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
 
       - name: Restore
         run: dotnet restore backend/MyApp.sln
