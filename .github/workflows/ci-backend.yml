@@ -16,16 +16,14 @@ concurrency:
   group: backend-ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  ASPNETCORE_ENVIRONMENT: Development
+  DOTNET_ENVIRONMENT: Development
+
 jobs:
-  backend-test:
+  unit-tests:
+    name: Unit Tests
     runs-on: ubuntu-latest
-
-    env:
-      ASPNETCORE_ENVIRONMENT: Development
-      DOTNET_ENVIRONMENT: Development
-
-      # 如果 CI 上遇到 Testcontainers 問題才需要打開
-      # TESTCONTAINERS_RYUK_DISABLED: "true"1
 
     steps:
       - name: Checkout source
@@ -34,9 +32,8 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.x"   # .NET 10
+          dotnet-version: "10.0.x"
 
-      # NuGet Cache（加速 restore）
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
@@ -51,12 +48,63 @@ jobs:
       - name: Build
         run: dotnet build backend/MyApp.sln -c Release --no-restore
 
-      - name: Test (Unit + Integration)
-        run: dotnet test backend/MyApp.sln -c Release --no-build --logger "trx;LogFileName=test_results.trx"
+      # ✅ 只跑 UnitTests 專案（最快）
+      - name: Test (Unit)
+        run: dotnet test backend/MyApp.UnitTests/MyApp.UnitTests.csproj -c Release --no-build --logger "trx;LogFileName=unit_tests.trx"
 
-      - name: Upload test results
+      - name: Upload unit test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-test-results
+          name: unit-test-results
+          path: backend/**/TestResults/*.trx
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    # 如果你希望「Unit 先過才跑 Integration」，把下面 needs 打開
+    needs: unit-tests
+
+    env:
+      ASPNETCORE_ENVIRONMENT: Development
+      DOTNET_ENVIRONMENT: Development
+      # 若 CI 遇到 Testcontainers/ryuk 問題才需要打開
+      # TESTCONTAINERS_RYUK_DISABLED: "true"
+
+      # 可選：讓 testcontainers log 更清楚（需要時再打開）
+      # TESTCONTAINERS_LOGLEVEL: "DEBUG"
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/**/*.props', 'backend/**/*.targets', 'backend/global.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore backend/MyApp.sln
+
+      - name: Build
+        run: dotnet build backend/MyApp.sln -c Release --no-restore
+
+      # ✅ 只跑 IntegrationTests 專案（包含 Testcontainers）
+      - name: Test (Integration)
+        run: dotnet test backend/MyApp.IntegrationTests/MyApp.IntegrationTests.csproj -c Release --no-build --logger "trx;LogFileName=integration_tests.trx"
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
           path: backend/**/TestResults/*.trx
