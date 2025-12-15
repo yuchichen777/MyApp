@@ -41,6 +41,6 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      ## build 內已包含 tsc -b + vite build
+      # build 內已包含 tsc -b + vite build
       - name: Build
         run: npm run build
