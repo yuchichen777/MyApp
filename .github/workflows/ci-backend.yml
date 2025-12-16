@@ -22,7 +22,7 @@ env:
 
 jobs:
   unit-tests:
-    name: Unit Tests
+    name: Backend CI - Unit Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -60,7 +60,7 @@ jobs:
           path: backend/**/TestResults/*.trx
 
   integration-tests:
-    name: Integration Tests
+    name: Backend CI - Integration Tests
     runs-on: ubuntu-latest
 
     # 如果你希望「Unit 先過才跑 Integration」，把下面 needs 打開

@@ -1,0 +1,15 @@
+services:
+  api:
+    build: ../backend
+    container_name: myapp-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Server=host.docker.internal,1433;Database=MyAppDb;User Id=bill;Password=P@ssw0rd;Encrypt=True;TrustServerCertificate=True;
+
+  web:
+    build: ../frontend
+    container_name: myapp-web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api

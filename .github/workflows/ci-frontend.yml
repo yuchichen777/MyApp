@@ -18,6 +18,7 @@ concurrency:
 
 jobs:
   frontend:
+    name: Frontend CI
     runs-on: ubuntu-latest
 
     defaults:

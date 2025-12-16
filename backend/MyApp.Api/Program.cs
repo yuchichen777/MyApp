@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using MyApp.Api.Middleware;
 using MyApp.Api.Models;
 using MyApp.Api.Services;
@@ -16,6 +17,7 @@ using Serilog;
 using Serilog.Events;
 using System.Security.Claims;
 using System.Text;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,6 +77,33 @@ builder.Services.AddValidatorsFromAssemblyContaining<ProductCreateDto>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "MyApp.Api", Version = "v1" });
+
+    var securityScheme = new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "請輸入：Bearer {token}"
+    };
+
+    c.AddSecurityDefinition("Bearer", securityScheme);
+
+    c.AddSecurityRequirement(document =>
+    {
+        // ✅ 這裡要用同一個 schemeId
+        var schemeRef = new OpenApiSecuritySchemeReference("Bearer", document);
+
+        var requirement = new OpenApiSecurityRequirement
+        {
+            [schemeRef] = new List<string>()
+        };
+
+        return requirement;
+    });
+
     c.EnableAnnotations();
 });
 
@@ -158,11 +187,14 @@ using (var scope = app.Services.CreateScope())
 // 全域錯誤處理，盡量放前面包住後面所有 middleware
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+//if (app.Environment.IsDevelopment())
+//{
+//    app.UseSwagger();
+//    app.UseSwaggerUI();
+//}
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseCors("AllowFrontend");
 
